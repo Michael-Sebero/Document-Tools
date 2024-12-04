@@ -6,7 +6,7 @@
 ```
 pip install pyzipper textract python-magic
 
-git clone https://github.com/michaelsebero/Document-Tools
+git clone https://github.com/MichaelSebero/Document-Tools
 
 sh /home/$USER/Document-Tools/document-tools
 ```
