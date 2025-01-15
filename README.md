@@ -24,9 +24,7 @@ This script looks in a given directory recursively for keywords in documents and
 This script looks in a given directory's `.zip` or `.tar` file for keywords in documents and tells you where you can find them in the archive.
 
 ## Keyword Line Extractor
-This script looks for keywords in a file and extracts lines where they're found to an output file - 
-
-`keyword-line-extractor-r` does this recursively in a directory but combines the keywords in the output file.
+This script looks for keywords in a file and extracts lines where they're found to an output file.
 
 ## Replace Keyword
-This script replaces keywords in a file and `replace-keyword-r` does this recursively. 
+This script replaces keywords in a file.

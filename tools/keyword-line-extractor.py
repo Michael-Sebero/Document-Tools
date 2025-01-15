@@ -1,27 +1,36 @@
 import os
 
-def filter_and_save(file_path, keyword):
-    # Read the contents of the file in binary mode
-    with open(file_path, 'rb') as file:
-        lines = file.readlines()
+def filter_and_save(file_path, keyword, recursive=False):
+    def process_file(file_path):
+        try:
+            with open(file_path, 'rb') as file:
+                lines = file.readlines()
 
-    # Filter lines containing the keyword
-    filtered_lines = [line for line in lines if keyword.encode('utf-8') in line]
+            filtered_lines = [line for line in lines if keyword.encode('utf-8') in line]
 
-    # Write the filtered lines to a new file in binary mode
-    output_path = os.path.splitext(file_path)[0] + "_filtered.txt"
-    with open(output_path, 'wb') as output_file:
-        output_file.writelines(filtered_lines)
+            if filtered_lines:
+                output_path = os.path.splitext(file_path)[0] + "_filtered.txt"
+                with open(output_path, 'wb') as output_file:
+                    output_file.writelines(filtered_lines)
+                print(f"Filtered content saved to: {output_path}")
+        except Exception as e:
+            print(f"Error processing {file_path}: {e}")
 
-    print(f"Filtered content saved to: {output_path}")
+    def process_directory(dir_path):
+        for entry in os.scandir(dir_path):
+            if entry.is_file():
+                process_file(entry.path)
+            elif entry.is_dir() and recursive:
+                process_directory(entry.path)
 
-if __name__ == "__main__":
-    # Get user input for file path and keyword
-    file_path = input("Enter the file path: ")
-    keyword = input("Enter the keyword: ")
-
-    # Validate file existence
-    if not os.path.isfile(file_path):
-        print("Error: The specified file does not exist.")
+    if os.path.isfile(file_path):
+        process_file(file_path)
+    elif os.path.isdir(file_path):
+        process_directory(file_path)
     else:
-        filter_and_save(file_path, keyword)
+        print("Error: The specified path does not exist.")
+
+def main():
+    path = input("Directory path: ")
+    keyword = input("Enter the keyword: ")
+    recursive = input("Apply recursively? (y/n): ").lower() == 'y

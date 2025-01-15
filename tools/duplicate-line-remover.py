@@ -1,25 +1,40 @@
 import os
 
-def sort_and_save_unique_lines(input_location):
-    with open(input_location, 'r', encoding='utf-8') as input_file:
-        lines = input_file.readlines()
+def sort_and_save_unique_lines(input_location, recursive=False):
+    def process_file(file_path):
+        try:
+            with open(file_path, 'r', encoding='utf-8') as input_file:
+                lines = input_file.readlines()
 
-    unique_lines = sorted(set(lines))  # Fixed the missing parenthesis here
+            unique_lines = sorted(set(lines))
 
-    # Extract the input file name without the path
-    input_file_name = os.path.basename(input_location)
+            # Create output filename
+            input_file_name = os.path.basename(file_path)
+            output_file_path = os.path.join(os.path.dirname(file_path), f"output_{input_file_name}")
 
-    # Construct the output file path in the same directory as the input file
-    output_file_path = os.path.join(os.path.dirname(input_location), f"output_{input_file_name}")
+            with open(output_file_path, 'w', encoding='utf-8') as output_file:
+                output_file.writelines(unique_lines)
 
-    with open(output_file_path, 'w', encoding='utf-8') as output_file:
-        output_file.writelines(unique_lines)
+            print(f"Processed: {file_path} -> {output_file_path}")
+        except Exception as e:
+            print(f"Error processing {file_path}: {e}")
 
-    print(f"Sorting completed. Unique lines saved in {output_file_path}")
+    def process_directory(dir_path):
+        for entry in os.scandir(dir_path):
+            if entry.is_file():
+                process_file(entry.path)
+            elif entry.is_dir() and recursive:
+                process_directory(entry.path)
+
+    if os.path.isfile(input_location):
+        process_file(input_location)
+    elif os.path.isdir(input_location):
+        process_directory(input_location)
+    else:
+        print("Error: The specified path does not exist.")
 
 if __name__ == "__main__":
-    # Get input file path from the user
-    location_of_file = input("Enter the file path: ")
-
-    # Sort and save unique lines to the output file in the same directory as the input file
-    sort_and_save_unique_lines(location_of_file)
+    location = input("Directory path: ")
+    recursive = input("Apply recursively? (y/n): ").lower() == 'y'
+    
+    sort_and_save_unique_lines(location, recursive)
