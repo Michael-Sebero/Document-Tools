@@ -18,11 +18,7 @@ display_list() {
     echo -e "\033[1m  Document Tools\033[0m\n  --------------"
     for i in "${!commands[@]}"; do
         if [ $i -eq $selected ]; then
-            if [ "${commands[$i]}" == "Quit" ]; then
-                echo -e "\033[1m➤ ${commands[$i]}\033[0m\n"
-            else
-                echo -e "\033[1m➤ ${commands[$i]}\033[0m\n"
-            fi
+            echo -e "\033[1m➤ ${commands[$i]}\033[0m\n"
         else
             echo -e "  ${commands[$i]}\n"
         fi
@@ -49,10 +45,12 @@ execute_command() {
             read -p "Press Enter to return to the menu..."
             ;;
         "Keyword Line Extractor") 
-            handle_keyword_line_extractor
+            python3 Document-Tools/tools/keyword-line-extractor.py
+            read -p "Press Enter to return to the menu..."
             ;;
         "Replace Keyword") 
-            handle_replace_keyword
+            python3 Document-Tools/tools/replace-keyword.py
+            read -p "Press Enter to return to the menu..."
             ;;
         "Quit") 
             echo -e "\n\033[1mExiting script\033[0m"
@@ -62,94 +60,6 @@ execute_command() {
             echo -e "\nInvalid selection"
             ;;
     esac
-}
-
-# Function to handle Keyword Line Extractor command and its recursive option
-handle_keyword_line_extractor() {
-    recursive_options=("Default" "Recursive" "Quit")
-    recursive_selected=0
-
-    while true; do
-        clear
-        echo -e "\033[1m  Keyword Line Extractor Options\033[0m\n  "
-        for i in "${!recursive_options[@]}"; do
-            if [ $i -eq $recursive_selected ]; then
-                echo -e "\033[1m➤ ${recursive_options[$i]}\033[0m\n"
-            else
-                echo -e "  ${recursive_options[$i]}\n"
-            fi
-        done
-
-        read -sn 1 key
-
-        case $key in
-            "A") ((recursive_selected--)); [ $recursive_selected -lt 0 ] && recursive_selected=$(( ${#recursive_options[@]} - 1 ));;
-            "B") ((recursive_selected++)); [ $recursive_selected -ge ${#recursive_options[@]} ] && recursive_selected=0 ;;
-            "") 
-                case ${recursive_options[$recursive_selected]} in
-                    "Default")
-                        python3 Document-Tools/tools/keyword-line-extractor.py
-                        read -p "Press Enter to return to the menu..."
-                        ;;
-                    "Recursive")
-                        python3 Document-Tools/tools/keyword-line-extractor-r.py
-                        read -p "Press Enter to return to the menu..."
-                        ;;
-                    "Quit")
-                        return
-                        ;;
-                    *) 
-                        echo -e "\nInvalid selection"
-                        ;;
-                esac
-                ;;
-            *) ;;
-        esac
-    done
-}
-
-# Function to handle Replace Keyword command and its recursive option
-handle_replace_keyword() {
-    recursive_options=("Default" "Recursive" "Quit")
-    recursive_selected=0
-
-    while true; do
-        clear
-        echo -e "\033[1m  Replace Keyword Options\033[0m\n  "
-        for i in "${!recursive_options[@]}"; do
-            if [ $i -eq $recursive_selected ]; then
-                echo -e "\033[1m➤ ${recursive_options[$i]}\033[0m\n"
-            else
-                echo -e "  ${recursive_options[$i]}\n"
-            fi
-        done
-
-        read -sn 1 key
-
-        case $key in
-            "A") ((recursive_selected--)); [ $recursive_selected -lt 0 ] && recursive_selected=$(( ${#recursive_options[@]} - 1 ));;
-            "B") ((recursive_selected++)); [ $recursive_selected -ge ${#recursive_options[@]} ] && recursive_selected=0 ;;
-            "") 
-                case ${recursive_options[$recursive_selected]} in
-                    "Default")
-                        python3 Document-Tools/replace-keyword.py
-                        read -p "Press Enter to return to the menu..."
-                        ;;
-                    "Recursive")
-                        python3 Document-Tools/replace-keyword-r.py
-                        read -p "Press Enter to return to the menu..."
-                        ;;
-                    "Quit")
-                        return
-                        ;;
-                    *) 
-                        echo -e "\nInvalid selection"
-                        ;;
-                esac
-                ;;
-            *) ;;
-        esac
-    done
 }
 
 # Main loop
