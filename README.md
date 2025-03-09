@@ -4,7 +4,7 @@
 ## How to Install
 
 ```
-pip install pyzipper textract python-magic
+pip install pyzipper textract python-magic PyPDF2 python-docx chardet
 
 git clone https://github.com/Michael-Sebero/Document-Tools
 
