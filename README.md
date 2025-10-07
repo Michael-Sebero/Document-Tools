@@ -28,3 +28,6 @@ This script looks for keywords in a file and extracts lines where they're found 
 
 ## Replace Keyword
 This script replaces keywords in a file.
+
+## Text Extract
+This script extracts text from an image or a directory full of images.
