@@ -17,6 +17,9 @@ This script compares two documents and lists the similarities and differences to
 ## Duplicate Line Remover
 This script detects duplicate lines in a file, removes them and then saves the changes to an output file.
 
+## Extract Text
+This script extracts text from an image or a directory full of images.
+
 ## Find Word
 This script looks in a given directory recursively for keywords in documents and tells you where you can find them.
 
@@ -29,5 +32,3 @@ This script looks for keywords in a file and extracts lines where they're found 
 ## Replace Keyword
 This script replaces keywords in a file.
 
-## Text Extract
-This script extracts text from an image or a directory full of images.

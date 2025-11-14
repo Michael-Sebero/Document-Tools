@@ -3,11 +3,11 @@
 commands=(
     "Compare Documents"
     "Duplicate Line Remover"
+    "Extract Text"
     "Find Word"
     "Find Word Archive"
     "Keyword Line Extractor"
     "Replace Keyword"
-    "Text Extract"
     "Quit"
 )
 
@@ -37,6 +37,10 @@ execute_command() {
             python3 Document-Tools/tools/duplicate-line-remover.py
             read -p "Press Enter to return to the menu..."
             ;;
+        "Extract Text") 
+            python3 Document-Tools/tools/text-extract.py
+            read -p "Press Enter to return to the menu..."
+            ;;
         "Find Word") 
             python3 Document-Tools/tools/find-word.py
             read -p "Press Enter to return to the menu..."
@@ -51,10 +55,6 @@ execute_command() {
             ;;
         "Replace Keyword") 
             python3 Document-Tools/tools/replace-keyword.py
-            read -p "Press Enter to return to the menu..."
-            ;;
-        "Text Extract") 
-            python3 Document-Tools/tools/text-extract.py
             read -p "Press Enter to return to the menu..."
             ;;
         "Quit") 
