@@ -38,7 +38,7 @@ execute_command() {
             read -p "Press Enter to return to the menu..."
             ;;
         "Extract Text") 
-            python3 Document-Tools/tools/text-extract.py
+            python3 Document-Tools/tools/extract-text.py
             read -p "Press Enter to return to the menu..."
             ;;
         "Find Word") 
