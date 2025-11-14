@@ -1,17 +1,4 @@
 #!/usr/bin/env python3
-"""
-Image Text Extractor
-Extracts text from images in a given directory using Tesseract OCR.
-
-Requirements:
-    pip install pytesseract pillow
-    
-System Requirements:
-    - Tesseract OCR must be installed on your system
-    - Ubuntu/Debian: sudo apt-get install tesseract-ocr
-    - macOS: brew install tesseract
-    - Windows: Download from https://github.com/UB-Mannheim/tesseract/wiki
-"""
 
 import os
 import sys
