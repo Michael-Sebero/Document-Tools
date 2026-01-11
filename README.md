@@ -8,7 +8,7 @@ pip install pyzipper textract python-magic PyPDF2 python-docx chardet python-pyt
 
 git clone https://github.com/Michael-Sebero/Document-Tools
 
-sh /home/$USER/Document-Tools/document-tools
+python3 /home/$USER/Document-Tools/document-tools.py
 ```
 
 ## Compare Documents
