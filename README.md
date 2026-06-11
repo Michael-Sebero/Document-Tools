@@ -4,7 +4,7 @@
 ## How to Install
 
 ```
-pip install pyzipper textract python-magic PyPDF2 python-docx chardet python-pytesseract
+pip install pyzipper textract python-magic PyPDF2 python-docx chardet python-pytesseract requests beautifulsoup4 cssutils
 
 git clone https://github.com/Michael-Sebero/Document-Tools
 
@@ -32,3 +32,5 @@ This looks for keywords in a file and extracts lines where they're found to an o
 ## Replace Keyword
 This replaces keywords in a file.
 
+## Web Font Extractor
+This fetches a webpage and downloads all fonts found in its stylesheets to `~/Downloads/Fonts/`. Supports TTF only or all formats (TTF, OTF, WOFF, WOFF2, EOT).

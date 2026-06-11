@@ -42,6 +42,17 @@ try:
 except ImportError:
     ARCHIVE_AVAILABLE = False
 
+try:
+    import requests
+    from urllib.parse import urljoin, urlparse
+    from bs4 import BeautifulSoup
+    import cssutils
+    import logging
+    cssutils.log.setLevel(logging.CRITICAL)
+    FONT_AVAILABLE = True
+except ImportError:
+    FONT_AVAILABLE = False
+
 
 # ============================================================================
 # TERMINAL UTILITIES
@@ -100,6 +111,7 @@ class Config:
                      '.ini', '.cfg', '.properties', '.csv', '.tsv'}
     CODE_EXTS = {'.py', '.js', '.html', '.css', '.java', '.c', '.cpp', '.h', '.sh', '.bat', '.ps1', '.sql'}
     ARCHIVE_EXTS = {'.zip', '.tar', '.tar.gz', '.rar', '.gz', '.7z'}
+    FONT_EXTS = {'.ttf', '.otf', '.woff', '.woff2', '.eot'}
 
 
 class PathUtils:
@@ -769,6 +781,170 @@ class KeywordProcessor:
 
 
 # ============================================================================
+# FONT EXTRACTION
+# ============================================================================
+
+class FontExtractor:
+    """Extract and download web fonts from URLs"""
+
+    @staticmethod
+    def extract_fonts():
+        """Extract fonts from a webpage URL"""
+        if not FONT_AVAILABLE:
+            print("Error: Required libraries not installed.")
+            print("Run: pip install requests beautifulsoup4 cssutils")
+            return
+
+        url = input("Enter webpage URL: ").strip()
+        if not url:
+            print("Error: No URL provided")
+            return
+
+        if not url.startswith(('http://', 'https://')):
+            url = 'https://' + url
+
+        font_types = UserInput.get_choice(
+            "Font formats to download:\n1 = TTF only\n2 = All formats (TTF, OTF, WOFF, WOFF2, EOT)\nEnter 1 or 2: ",
+            ['1', '2']
+        )
+        all_formats = (font_types == '2')
+
+        dest_folder = Path.home() / "Downloads" / "Fonts"
+        dest_folder.mkdir(parents=True, exist_ok=True)
+
+        print(f"\nFetching webpage: {url}\n")
+        FontExtractor._extract_from_url(url, dest_folder, all_formats)
+
+    @staticmethod
+    def _get_target_extensions(all_formats: bool) -> Set[str]:
+        """Return the set of font extensions to look for"""
+        if all_formats:
+            return {'.ttf', '.otf', '.woff', '.woff2', '.eot'}
+        return {'.ttf'}
+
+    @staticmethod
+    def _extract_fonts_from_css(css_text: str, base_url: str, extensions: Set[str]) -> List[str]:
+        """Extract font URLs from CSS text"""
+        fonts = []
+
+        try:
+            sheet = cssutils.parseString(css_text)
+            for rule in sheet:
+                if rule.type == rule.FONT_FACE_RULE:
+                    for prop in rule.style:
+                        if prop.name == 'src':
+                            urls = re.findall(r'url\(["\']?([^"\')]+)["\']?\)', prop.value)
+                            for url in urls:
+                                if not url.startswith('data:'):
+                                    ext = os.path.splitext(url.split('?')[0])[1].lower()
+                                    if ext in extensions:
+                                        fonts.append(urljoin(base_url, url))
+        except Exception:
+            pass
+
+        # Backup regex pass for any missed font URLs
+        ext_pattern = '|'.join(re.escape(e) for e in extensions)
+        pattern = rf'url\(["\']?([^"\')]+(?:{ext_pattern}))["\']?\)'
+        for url in re.findall(pattern, css_text, re.IGNORECASE):
+            if not url.startswith('data:'):
+                full_url = urljoin(base_url, url)
+                if full_url not in fonts:
+                    fonts.append(full_url)
+
+        return fonts
+
+    @staticmethod
+    def _download_font(url: str, dest_folder: Path) -> bool:
+        """Download a single font file"""
+        try:
+            response = requests.get(url, timeout=10)
+            response.raise_for_status()
+
+            parsed = urlparse(url)
+            filename = os.path.basename(parsed.path).split('?')[0]
+
+            # Ensure a font extension is present
+            if not any(filename.lower().endswith(ext) for ext in Config.FONT_EXTS):
+                filename += '.ttf'
+
+            filepath = PathUtils.ensure_unique(dest_folder / filename)
+
+            with open(filepath, 'wb') as f:
+                f.write(response.content)
+
+            print(f"Downloaded: {filepath.name}")
+            return True
+
+        except Exception as e:
+            print(f"Failed to download {url}: {e}")
+            return False
+
+    @staticmethod
+    def _extract_from_url(url: str, dest_folder: Path, all_formats: bool):
+        """Fetch a page and collect all matching font URLs"""
+        extensions = FontExtractor._get_target_extensions(all_formats)
+        all_fonts: Set[str] = set()
+
+        try:
+            response = requests.get(url, timeout=10)
+            response.raise_for_status()
+            soup = BeautifulSoup(response.text, 'html.parser')
+
+            # 1. Inline <style> blocks
+            for style_tag in soup.find_all('style'):
+                fonts = FontExtractor._extract_fonts_from_css(
+                    style_tag.string or '', url, extensions
+                )
+                all_fonts.update(fonts)
+
+            # 2. External stylesheets
+            for link in soup.find_all('link', rel='stylesheet'):
+                css_url = urljoin(url, link.get('href', ''))
+                try:
+                    css_response = requests.get(css_url, timeout=10)
+                    css_response.raise_for_status()
+                    fonts = FontExtractor._extract_fonts_from_css(
+                        css_response.text, css_url, extensions
+                    )
+                    all_fonts.update(fonts)
+                except Exception as e:
+                    print(f"Warning: Could not fetch CSS from {css_url}: {e}")
+
+            # 3. Google Fonts / font service links
+            for link in soup.find_all('link'):
+                href = link.get('href', '')
+                if 'fonts.googleapis.com' in href or 'fonts.gstatic.com' in href:
+                    try:
+                        font_response = requests.get(href, timeout=10)
+                        fonts = FontExtractor._extract_fonts_from_css(
+                            font_response.text, href, extensions
+                        )
+                        all_fonts.update(fonts)
+                    except Exception as e:
+                        print(f"Warning: Could not fetch fonts from {href}: {e}")
+
+            if not all_fonts:
+                fmt_label = "fonts" if all_formats else "TTF fonts"
+                print(f"No {fmt_label} found on this webpage.")
+                return
+
+            fmt_label = "font file(s)" if all_formats else "TTF font file(s)"
+            print(f"Found {len(all_fonts)} {fmt_label}")
+            print(f"Downloading to: {dest_folder}\n")
+
+            success_count = sum(
+                FontExtractor._download_font(font_url, dest_folder)
+                for font_url in all_fonts
+            )
+
+            print(f"\nSuccessfully downloaded {success_count}/{len(all_fonts)} fonts")
+            print(f"Location: {dest_folder}")
+
+        except Exception as e:
+            print(f"Error: {e}")
+
+
+# ============================================================================
 # MENU SYSTEM
 # ============================================================================
 
@@ -788,8 +964,6 @@ def show_menu(commands: List[str], selected: int):
 def run_command(cmd: str):
     """Execute the selected command"""
     clear()
-    print(f"\033[1m{cmd}\033[0m")
-    print("=" * 60 + "\n")
     
     try:
         if cmd == "Adjust Audio Volume":
@@ -808,6 +982,8 @@ def run_command(cmd: str):
             KeywordProcessor.extract_lines()
         elif cmd == "Replace Keyword":
             KeywordProcessor.replace_keyword()
+        elif cmd == "Web Font Extractor":
+            FontExtractor.extract_fonts()
         elif cmd == "Quit":
             clear()
             print("\n\033[1mExiting Document Tools\033[0m\n")
@@ -833,6 +1009,7 @@ def main():
         "Find Word Archive",
         "Keyword Line Extractor",
         "Replace Keyword",
+        "Web Font Extractor",
         "Quit"
     ]
     
