@@ -37,12 +37,6 @@ except ImportError:
     DOCUMENT_AVAILABLE = False
 
 try:
-    import pyzipper
-    ARCHIVE_AVAILABLE = True
-except ImportError:
-    ARCHIVE_AVAILABLE = False
-
-try:
     import requests
     from urllib.parse import urljoin, urlparse
     from bs4 import BeautifulSoup
@@ -53,10 +47,6 @@ try:
 except ImportError:
     FONT_AVAILABLE = False
 
-
-# ============================================================================
-# TERMINAL UTILITIES
-# ============================================================================
 
 def get_key():
     """Get single keypress from terminal"""
@@ -92,10 +82,6 @@ def clear():
     """Clear terminal screen"""
     os.system('clear' if os.name != 'nt' else 'cls')
 
-
-# ============================================================================
-# CORE UTILITIES
-# ============================================================================
 
 class Config:
     """Central configuration"""
@@ -207,10 +193,6 @@ class UserInput:
             print(f"Invalid choice. Please enter one of: {', '.join(valid_choices)}")
 
 
-# ============================================================================
-# AUDIO OPERATIONS
-# ============================================================================
-
 class AudioProcessor:
     """Audio file processing operations"""
     
@@ -278,10 +260,6 @@ class AudioProcessor:
         print(f"Saved: {output_path}")
 
 
-# ============================================================================
-# DOCUMENT OPERATIONS
-# ============================================================================
-
 class DocumentProcessor:
     """Document processing operations"""
     
@@ -313,15 +291,14 @@ class DocumentProcessor:
     
     @staticmethod
     def _read_file(filepath: Path) -> List[str]:
-        """Read file lines with encoding detection"""
-        with open(filepath, 'rb') as f:
-            raw = f.read()
-            encoding = chardet.detect(raw)['encoding'] if DOCUMENT_AVAILABLE else 'utf-8'
-            if not encoding:
-                encoding = 'utf-8'
-        
-        with open(filepath, 'r', encoding=encoding, errors='replace') as f:
-            return f.readlines()
+        """Read file lines with encoding fallback"""
+        for encoding in ['utf-8', 'latin-1', 'cp1252']:
+            try:
+                with open(filepath, 'r', encoding=encoding, errors='replace') as f:
+                    return f.readlines()
+            except (UnicodeDecodeError, LookupError):
+                continue
+        return []
     
     @staticmethod
     def _write_comparison(output: Path, file1: Path, file2: Path, 
@@ -381,10 +358,6 @@ class DuplicateRemover:
         
         print(f"Processed: {filepath.name} → {output_path.name}")
 
-
-# ============================================================================
-# TEXT EXTRACTION
-# ============================================================================
 
 class TextExtractor:
     """Extract text from images using OCR"""
@@ -451,10 +424,6 @@ class TextExtractor:
             print(f"Error: {e}")
 
 
-# ============================================================================
-# FILE SEARCH
-# ============================================================================
-
 class FileSearcher:
     """Search files for keywords"""
     
@@ -519,23 +488,22 @@ class FileSearcher:
     
     @staticmethod
     def _search_text(filepath: Path, pattern: re.Pattern) -> List[Tuple[int, str]]:
-        """Search text file"""
+        """Search text file (streaming to avoid OOM on large files)"""
         matches = []
-        
-        try:
-            with open(filepath, 'rb') as f:
-                raw = f.read()
-                encoding = chardet.detect(raw)['encoding'] if DOCUMENT_AVAILABLE else 'utf-8'
-                if not encoding:
-                    encoding = 'utf-8'
-            
-            with open(filepath, 'r', encoding=encoding, errors='replace') as f:
-                for i, line in enumerate(f, 1):
-                    if pattern.search(line):
-                        matches.append((i, line.strip()))
-        except Exception:
-            pass
-        
+
+        encodings = ['utf-8', 'latin-1', 'cp1252']
+        for encoding in encodings:
+            try:
+                with open(filepath, 'r', encoding=encoding, errors='replace') as f:
+                    for i, line in enumerate(f, 1):
+                        if pattern.search(line):
+                            matches.append((i, line.strip()))
+                break
+            except (UnicodeDecodeError, LookupError):
+                continue
+            except Exception:
+                break
+
         return matches
     
     @staticmethod
@@ -593,96 +561,6 @@ class FileSearcher:
                     print(f"    ... and {len(matches) - 5} more matches")
             print()
 
-
-class ArchiveSearcher:
-    """Search within archive files"""
-    
-    @staticmethod
-    def search_archives():
-        """Search for keyword in archive files"""
-        if not ARCHIVE_AVAILABLE:
-            print("Error: pyzipper not installed. Run: pip install pyzipper")
-            return
-        
-        directory = PathUtils.get_valid_path("Enter archive directory: ")
-        if not directory or not directory.is_dir():
-            return
-        
-        password = input("Enter archive password (leave empty if none): ").strip()
-        keyword = input("Enter keyword to search: ").strip()
-        
-        if not keyword:
-            print("Error: No keyword provided")
-            return
-        
-        archives = FileScanner.scan(directory, Config.ARCHIVE_EXTS)
-        
-        if not archives:
-            print("No archive files found")
-            return
-        
-        print(f"\nSearching {len(archives)} archives...\n")
-        
-        found_files = []
-        temp_dir = tempfile.mkdtemp()
-        
-        try:
-            for archive in archives:
-                found = ArchiveSearcher._search_archive(archive, temp_dir, password, keyword)
-                found_files.extend(found)
-        finally:
-            shutil.rmtree(temp_dir, ignore_errors=True)
-        
-        if found_files:
-            print(f"\nKeyword '{keyword}' found in {len(found_files)} files:")
-            for archive, filepath in found_files:
-                print(f"  {archive.name} → {filepath}")
-        else:
-            print(f"\nNo files found containing '{keyword}'")
-    
-    @staticmethod
-    def _search_archive(archive: Path, temp_dir: str, password: str, keyword: str) -> List[Tuple[Path, str]]:
-        """Search single archive file"""
-        found = []
-        
-        try:
-            if tarfile.is_tarfile(archive):
-                with tarfile.open(archive, 'r') as tar:
-                    tar.extractall(path=temp_dir)
-            else:
-                with pyzipper.AESZipFile(archive, 'r') as zf:
-                    if password:
-                        zf.extractall(pwd=password.encode(), path=temp_dir)
-                    else:
-                        zf.extractall(path=temp_dir)
-            
-            # Search extracted files
-            for root, _, files in os.walk(temp_dir):
-                for name in files:
-                    filepath = os.path.join(root, name)
-                    try:
-                        with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
-                            if keyword in f.read():
-                                found.append((archive, filepath))
-                    except Exception:
-                        pass
-            
-            # Clean temp directory for next archive
-            for item in Path(temp_dir).iterdir():
-                if item.is_file():
-                    item.unlink()
-                elif item.is_dir():
-                    shutil.rmtree(item)
-        
-        except Exception as e:
-            print(f"Error processing {archive.name}: {e}")
-        
-        return found
-
-
-# ============================================================================
-# KEYWORD OPERATIONS
-# ============================================================================
 
 class KeywordProcessor:
     """Keyword-based file operations"""
@@ -779,10 +657,6 @@ class KeywordProcessor:
         
         return False
 
-
-# ============================================================================
-# FONT EXTRACTION
-# ============================================================================
 
 class FontExtractor:
     """Extract and download web fonts from URLs"""
@@ -944,10 +818,6 @@ class FontExtractor:
             print(f"Error: {e}")
 
 
-# ============================================================================
-# MENU SYSTEM
-# ============================================================================
-
 def show_menu(commands: List[str], selected: int):
     """Display menu with highlighted selection"""
     clear()
@@ -976,8 +846,6 @@ def run_command(cmd: str):
             TextExtractor.extract_text()
         elif cmd == "Find Word":
             FileSearcher.find_word()
-        elif cmd == "Find Word Archive":
-            ArchiveSearcher.search_archives()
         elif cmd == "Keyword Line Extractor":
             KeywordProcessor.extract_lines()
         elif cmd == "Replace Keyword":
@@ -1006,7 +874,6 @@ def main():
         "Duplicate Line Remover",
         "Extract Text",
         "Find Word",
-        "Find Word Archive",
         "Keyword Line Extractor",
         "Replace Keyword",
         "Web Font Extractor",

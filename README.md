@@ -23,9 +23,6 @@ This extracts text from an image or a directory full of images.
 ## Find Word
 This looks in a given directory recursively for keywords in documents and tells you where you can find them.
 
-## Find Word Archive
-This looks in a given directory's `.zip` or `.tar` file for keywords in documents and tells you where you can find them in the archive.
-
 ## Keyword Line Extractor
 This looks for keywords in a file and extracts lines where they're found to an output file.
 
